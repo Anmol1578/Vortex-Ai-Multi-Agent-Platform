@@ -223,6 +223,22 @@ export const saveMessage = async (req, res) => {
   }
 };
 
+// export const getMessages = async (req, res) => {
+//   try {
+//     const messages = await Message.find({
+//       conversationId: req.params.conversationId,
+//     }).sort({
+//       createdAt: 1,
+//     });
+
+//     return res.status(200).json(messages);
+//   } catch (error) {
+//     return res.status(500).json({
+//       message: `get messages error ${error}`,
+//     });
+//   }
+// };
+
 export const getMessages = async (req, res) => {
   try {
     const messages = await Message.find({
@@ -230,6 +246,8 @@ export const getMessages = async (req, res) => {
     }).sort({
       createdAt: 1,
     });
+
+    res.set("Cache-Control", "no-store");
 
     return res.status(200).json(messages);
   } catch (error) {
