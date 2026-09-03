@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import { warmupServices } from "./utils/serviceWarmup.js";
 import proxy from "express-http-proxy";
 dotenv.config();
 
@@ -50,4 +51,9 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+
+  // Wake all backend services in parallel.
+  warmupServices().catch((error) => {
+    console.error("[warmup] Warmup failed:", error.message);
+  });
 });
