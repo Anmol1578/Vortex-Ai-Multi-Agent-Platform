@@ -22,8 +22,7 @@ async function getMessages(id) {
         "Cache-Control": "no-cache",
       },
     });
-
-    console.log("Messages loaded:", data);
+    
     return data;
   } catch (error) {
     console.log("Get messages error:", error);
