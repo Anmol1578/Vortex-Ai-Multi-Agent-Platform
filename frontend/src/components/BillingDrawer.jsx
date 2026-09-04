@@ -326,7 +326,7 @@ function BillingDrawer({ open, onClose, userData }) {
             message: "Verifying payment...",
           });
 
-          console.log("Payment response:", response);
+          // console.log("Payment response:", response); 
 
           const verifyData = await verifyPayment(
             {
