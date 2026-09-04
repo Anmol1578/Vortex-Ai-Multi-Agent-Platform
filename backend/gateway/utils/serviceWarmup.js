@@ -59,9 +59,11 @@ export const warmupServices = async () => {
     services.map((service) => wakeService(service)),
   );
 
-  console.log(
-    `[warmup] Completed: ${results.filter((result) => result.status === "fulfilled").length}/${services.length}`,
-  );
+  const awake = results.filter(
+    (result) => result.status === "fulfilled" && result.value === true,
+  ).length;
+
+  console.log(`[warmup] Completed: ${awake}/${services.length} awake`);
 
   return results;
 };
