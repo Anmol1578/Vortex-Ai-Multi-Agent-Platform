@@ -1022,17 +1022,22 @@
 // export default Login;
 
 
-// GOOD UI VERSION ANTIGRAVITY 
+// GOOD UI VERSION ANTIGRAVITY
 
 import { signInWithPopup } from "firebase/auth";
-import React, { useEffect, useRef, useState , useMemo, useCallback } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+  useCallback,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, googleProvider } from "../../utils/firebase";
 import api from "../../utils/axios";
 import Dashboard from "./Dashboard";
 import { useSelector, useDispatch } from "react-redux";
 import { setUserdata } from "../redux/userSlice";
-
 
 import {
   Play,
@@ -1282,28 +1287,32 @@ const PIPELINE_STEPS = [
     title: "SUBMIT_TASK",
     text: "Describe the outcome you want in plain language or goal spec.",
     cmd: "vortex prompt --input='build auth'",
-    detail: "Natural language goal compiler extracts constraints and target acceptance criteria.",
+    detail:
+      "Natural language goal compiler extracts constraints and target acceptance criteria.",
   },
   {
     n: "02",
     title: "AGENTS_ACTIVATE",
     text: "The core assigns work to the relevant agents in isolated sandboxes.",
     cmd: "vortex spawn --roster=auto",
-    detail: "Dynamic topology generator binds Planner, Researcher, Coder, and Reviewer.",
+    detail:
+      "Dynamic topology generator binds Planner, Researcher, Coder, and Reviewer.",
   },
   {
     n: "03",
     title: "PIPELINE_EXEC",
     text: "Each agent runs its step and passes structured context forward.",
     cmd: "ctx.pipe(next_agent)",
-    detail: "Zero loss context bus transfers AST snapshots, diff chunks, and test vectors.",
+    detail:
+      "Zero loss context bus transfers AST snapshots, diff chunks, and test vectors.",
   },
   {
     n: "04",
     title: "REVIEW_AND_SHIP",
     text: "You get a merged, verified result, ready to sign off or refine.",
     cmd: "checkpoint.signoff()",
-    detail: "Human in the loop approval gate guarantees zero unreviewed production changes.",
+    detail:
+      "Human in the loop approval gate guarantees zero unreviewed production changes.",
   },
 ];
 
@@ -1602,11 +1611,70 @@ function Reveal({ children, className = "", delay = 0 }) {
   return (
     <div
       ref={ref}
-      className={`transition-all duration-700 ease-out ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-        } ${className}`}
+      className={`transition-all duration-700 ease-out ${
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+      } ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
+    </div>
+  );
+}
+
+function BackendWakeOverlay({ visible, attempt }) {
+  const [msgIndex, setMsgIndex] = useState(0);
+  const messages = [
+    "SIGNATURE VERIFIED — OPENING SESSION",
+    "CONTACTING AGENT CORE...",
+    attempt > 1
+      ? "BACKEND WAS ASLEEP — RETRYING HANDSHAKE"
+      : "ESTABLISHING SECURE CHANNEL",
+    "SPINNING UP SANDBOXES...",
+    "ALMOST THERE...",
+  ];
+  useEffect(() => {
+    if (!visible) return;
+    setMsgIndex(0);
+    const t = setInterval(
+      () => setMsgIndex((i) => (i + 1) % messages.length),
+      1800,
+    );
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, attempt]);
+  if (!visible) return null;
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#F7F6F2]/90 backdrop-blur-md motion-safe:animate-[fadeUp_0.3s_ease-out_both]">
+      <div className="w-full max-w-sm mx-4 rounded-2xl border border-white/80 glass-panel shadow-[0_25px_65px_-15px_rgba(20,21,26,0.2)] overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-black/[0.06] bg-white/40 flex items-center gap-2 font-[IBM_Plex_Mono,monospace] text-xs text-black/70 font-semibold tracking-wider uppercase">
+          <span className="relative flex w-2 h-2">
+            <span className="absolute inset-0 rounded-full bg-[#1E7A56] motion-safe:animate-[blink_1s_ease-in-out_infinite]" />
+            <span className="relative w-2 h-2 rounded-full bg-[#1E7A56]" />
+          </span>
+          BOOTING_SESSION
+        </div>
+        <div className="p-7 flex flex-col items-center gap-5">
+          <div className="relative w-16 h-16 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full border-2 border-[#1E7A56]/20" />
+            <div className="absolute inset-0 rounded-full border-2 border-t-[#1E7A56] border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+            <Cpu size={22} className="text-[#1E7A56]" />
+          </div>
+          <p className="font-[IBM_Plex_Mono,monospace] text-[12px] text-black/60 text-center min-h-[16px] tracking-tight">
+            {messages[msgIndex]}
+          </p>
+          {attempt > 0 && (
+            <span className="font-[IBM_Plex_Mono,monospace] text-[10px] text-[#C48A34] bg-[#C48A34]/10 border border-[#C48A34]/25 px-2.5 py-1 rounded-md font-semibold tracking-wider">
+              RETRY_ATTEMPT :: {attempt}
+            </span>
+          )}
+          <div className="w-full h-[3px] rounded-full bg-black/[0.06] overflow-hidden">
+            <div className="h-full w-1/3 rounded-full bg-[#1E7A56] motion-safe:animate-[loaderSlide_1.4s_ease-in-out_infinite]" />
+          </div>
+          <p className="font-[IBM_Plex_Mono,monospace] text-[9.5px] text-black/35 tracking-wider uppercase">
+            First sign-in of the day can take a few seconds
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1622,7 +1690,10 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [authPhase, setAuthPhase] = useState("idle"); // idle | popup | waking | error
+  const [wakeAttempt, setWakeAttempt] = useState(0);
   // Live telemetry states
+
   const [agents, setAgents] = useState(AGENT_ROSTER);
   const [clock, setClock] = useState("");
   const [millis, setMillis] = useState("000");
@@ -1723,38 +1794,110 @@ export default function Login() {
   /* -------------------------------------------------------------------------
      AUTHENTICATION LOGIC (100% UNTOUCHED)
   ------------------------------------------------------------------------- */
-  const handleLogin = async (token) => {
-    try {
-      const { data } = await api.post("/api/auth/login", { token });
-      if (data?.user) {
-        dispatch(setUserdata(data.user));
+  // const handleLogin = async (token) => {
+  //   try {
+  //     const { data } = await api.post("/api/auth/login", { token });
+  //     if (data?.user) {
+  //       dispatch(setUserdata(data.user));
+  //     }
+  //     return data;
+  //   } catch (err) {
+  //     console.error("Authentication API error:", err);
+  //     throw err;
+  //   }
+  // };
+
+  const loginWithRetry = async (
+    token,
+    { maxAttempts = 12, baseDelay = 1500 } = {},
+  ) => {
+    let attempt = 0;
+    while (attempt < maxAttempts) {
+      try {
+        const { data } = await api.post(
+          "/api/auth/login",
+          { token },
+          { timeout: 8000 },
+        );
+        return data;
+      } catch (err) {
+        attempt += 1;
+        setWakeAttempt(attempt);
+        const status = err?.response?.status;
+        const isColdStart =
+          !status || status === 502 || status === 503 || status === 504;
+        if (!isColdStart) throw err;
+        if (attempt >= maxAttempts) throw err;
+        await new Promise((r) =>
+          setTimeout(r, Math.min(baseDelay * attempt, 6000)),
+        );
       }
-      return data;
-    } catch (err) {
-      console.error("Authentication API error:", err);
-      throw err;
     }
   };
+
+  //   const googleLogin = async () => {
+  //     setError("");
+  //     setLoading(true);
+
+  //     try {
+  //       const result = await signInWithPopup(auth, googleProvider);
+  //       const token = await result.user.getIdToken();
+
+  //       const response = await handleLogin(token);
+
+  //       if (!response?.user) {
+  //         throw new Error(
+  //           "Authentication failed. User information was not returned.",
+  //         );
+  //       }
+
+  //       navigate("/dashboard");
+  //     } catch (err) {
+  //       console.error("Google authentication failed:", err);
+
+  //       if (err.code === "auth/popup-closed-by-user") {
+  //         setError("Sign-in was cancelled before completion.");
+  //       } else if (err.code === "auth/network-request-failed") {
+  //         setError(
+  //           "Network error. Please check your internet connection and try again.",
+  //         );
+  //       } else if (err.response?.status === 401) {
+  //         setError("Authentication failed. Please sign in again.");
+  //       } else {
+  //   setError(
+  //     "We couldn't reach the server. Please try again in a moment."
+  //   );
+  // }
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
 
   const googleLogin = async () => {
     setError("");
     setLoading(true);
+    setAuthPhase("popup");
+    setWakeAttempt(0);
 
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const token = await result.user.getIdToken();
 
-      const response = await handleLogin(token);
+      setAuthPhase("waking");
+      const data = await loginWithRetry(token);
 
-      if (!response?.user) {
+      if (!data?.user) {
         throw new Error(
           "Authentication failed. User information was not returned.",
         );
       }
 
+      dispatch(setUserdata(data.user));
+      setAuthPhase("idle");
       navigate("/dashboard");
     } catch (err) {
       console.error("Google authentication failed:", err);
+      setAuthPhase("error");
 
       if (err.code === "auth/popup-closed-by-user") {
         setError("Sign-in was cancelled before completion.");
@@ -1765,15 +1908,7 @@ export default function Login() {
       } else if (err.response?.status === 401) {
         setError("Authentication failed. Please sign in again.");
       } else {
-        // Fallback for seamless demo
-        const demoUser = {
-          name: "Alex Rivera",
-          email: "alex.rivera@vortex.engineering",
-          role: "Principal Engineer",
-          id: "usr_vortex_7f8a9e10",
-        };
-        dispatch(setUserdata(demoUser));
-        navigate("/dashboard");
+        setError("We couldn't reach the server. Please try again in a moment.");
       }
     } finally {
       setLoading(false);
@@ -1788,8 +1923,10 @@ export default function Login() {
 
     setAgents((prev) =>
       prev.map((a, idx) => {
-        if (idx === 2) return { ...a, status: "active", load: 94, badgeLabel: "AST_EXEC" };
-        if (idx === 3) return { ...a, status: "queued", load: 48, badgeLabel: "DIFF_READY" };
+        if (idx === 2)
+          return { ...a, status: "active", load: 94, badgeLabel: "AST_EXEC" };
+        if (idx === 3)
+          return { ...a, status: "queued", load: 48, badgeLabel: "DIFF_READY" };
         return a;
       }),
     );
@@ -1797,8 +1934,20 @@ export default function Login() {
     setTimeout(() => {
       setAgents((prev) =>
         prev.map((a, idx) => {
-          if (idx === 3) return { ...a, status: "active", load: 96, badgeLabel: "GATE_HELD" };
-          if (idx === 4) return { ...a, status: "queued", load: 55, badgeLabel: "SEC_ACTIVE" };
+          if (idx === 3)
+            return {
+              ...a,
+              status: "active",
+              load: 96,
+              badgeLabel: "GATE_HELD",
+            };
+          if (idx === 4)
+            return {
+              ...a,
+              status: "queued",
+              load: 55,
+              badgeLabel: "SEC_ACTIVE",
+            };
           return a;
         }),
       );
@@ -1833,6 +1982,11 @@ export default function Login() {
         @keyframes lineScan { 0% { transform: scaleX(0); opacity: 1; } 70% { transform: scaleX(1); opacity: 1; } 88% { transform: scaleX(1); opacity: 0.35; } 100% { transform: scaleX(0); opacity: 0; } }
         @keyframes dotLive { 0%, 18% { background: #F7F6F2; border-color: rgba(20,21,26,0.15); } 25%, 85% { background: #1E7A56; border-color: #1E7A56; box-shadow: 0 0 0 4px rgba(30,122,86,0.15); } 95%, 100% { background: #F7F6F2; border-color: rgba(20,21,26,0.15); } }
         @keyframes tickerScroll { 0% { transform: translateY(0); } 100% { transform: translateY(-50%); } }
+        
+        @keyframes loaderSlide {
+  0%   { transform: translateX(-120%); }
+  50%  { transform: translateX(150%); }
+100% { transform: translateX(420%); }}
 
         .glass-panel {
           background: rgba(255,255,255,0.72);
@@ -1887,7 +2041,9 @@ export default function Login() {
               <span className="bg-[#F7F6F2] rounded p-1 shadow-xs">
                 <GoogleIcon size={14} />
               </span>
-              <span className="font-[IBM_Plex_Mono,monospace] text-xs font-semibold uppercase">{loading ? "SIGNING IN…" : "SIGN IN"}</span>
+              <span className="font-[IBM_Plex_Mono,monospace] text-xs font-semibold uppercase">
+                {loading ? "SIGNING IN…" : "SIGN IN"}
+              </span>
             </button>
           </div>
         </div>
@@ -1930,7 +2086,9 @@ export default function Login() {
                 <span className="bg-white rounded-md p-1.5 shadow-sm">
                   <GoogleIcon size={16} />
                 </span>
-                <span>{loading ? "Authenticating…" : "Continue with Google"}</span>
+                <span>
+                  {loading ? "Authenticating…" : "Continue with Google"}
+                </span>
               </button>
 
               <a
@@ -2037,8 +2195,9 @@ export default function Login() {
                       onClick={() => {
                         setSelectedAgent(isSelected ? null : agent);
                       }}
-                      className={`glass-row px-5 py-3.5 flex items-center gap-3.5 cursor-pointer transition-all ${isSelected ? "bg-white/90 shadow-xs" : ""
-                        }`}
+                      className={`glass-row px-5 py-3.5 flex items-center gap-3.5 cursor-pointer transition-all ${
+                        isSelected ? "bg-white/90 shadow-xs" : ""
+                      }`}
                     >
                       {/* Live status dot */}
                       <span
@@ -2065,7 +2224,10 @@ export default function Login() {
                           <div className="h-[3px] w-full max-w-[140px] rounded-full bg-black/[0.06] overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all duration-500 ease-out"
-                              style={{ width: `${agent.load}%`, background: s.dot }}
+                              style={{
+                                width: `${agent.load}%`,
+                                background: s.dot,
+                              }}
                             />
                           </div>
                           <span className="font-[IBM_Plex_Mono,monospace] text-[9.5px] text-black/35 font-medium">
@@ -2139,7 +2301,9 @@ export default function Login() {
                   </div>
                   <div className="text-[11px] text-black/70 bg-[#1E7A56]/[0.06] p-2 rounded border border-[#1E7A56]/15 flex items-center gap-1.5">
                     <Terminal size={11} className="text-[#1E7A56]" />
-                    <span className="truncate uppercase font-medium">{selectedAgent.cmd}</span>
+                    <span className="truncate uppercase font-medium">
+                      {selectedAgent.cmd}
+                    </span>
                   </div>
                 </div>
               )}
@@ -2148,7 +2312,10 @@ export default function Login() {
               <div className="relative h-[50px] overflow-hidden border-t border-black/[0.06] bg-[#14151A]/[0.025] font-[IBM_Plex_Mono,monospace] text-[10.5px] text-black/55 leading-[25px]">
                 <div className="absolute inset-x-0 top-0 motion-safe:animate-[tickerScroll_11s_linear_infinite]">
                   {LOG_FEED.concat(LOG_FEED).map((line, i) => (
-                    <div key={i} className="px-5 truncate flex items-center gap-2">
+                    <div
+                      key={i}
+                      className="px-5 truncate flex items-center gap-2"
+                    >
                       <span className="text-[#1E7A56] font-bold">›</span>
                       <span className="tracking-tight">{line}</span>
                     </div>
@@ -2164,7 +2331,9 @@ export default function Login() {
                   <span className="w-1.5 h-1.5 rounded-full bg-[#1E7A56]" />
                   TOTAL_TOKENS: {totalTokens.toLocaleString()}
                 </span>
-                <span className="font-semibold text-black/40">CORE.VORTEX.AI</span>
+                <span className="font-semibold text-black/40">
+                  CORE.VORTEX.AI
+                </span>
               </div>
             </div>
           </div>
@@ -2273,21 +2442,23 @@ export default function Login() {
                         setPipelineActive(i);
                         setPipelineAuto(false);
                       }}
-                      className={`p-5 rounded-2xl border transition-all duration-300 cursor-pointer text-left ${isCurrent
+                      className={`p-5 rounded-2xl border transition-all duration-300 cursor-pointer text-left ${
+                        isCurrent
                           ? "bg-white border-[#1E7A56] shadow-[0_15px_35px_-8px_rgba(30,122,86,0.18)] translate-y-[-4px]"
                           : isPassed
                             ? "bg-white/90 border-[#1E7A56]/30 shadow-xs"
                             : "bg-white/60 border-black/[0.07] hover:border-black/20"
-                        }`}
+                      }`}
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div
-                          className={`w-7 h-7 rounded-full flex items-center justify-center font-[IBM_Plex_Mono,monospace] text-xs font-bold transition-all ${isCurrent
+                          className={`w-7 h-7 rounded-full flex items-center justify-center font-[IBM_Plex_Mono,monospace] text-xs font-bold transition-all ${
+                            isCurrent
                               ? "bg-[#1E7A56] text-white shadow-[0_0_12px_rgba(30,122,86,0.5)]"
                               : isPassed
                                 ? "bg-[#1E7A56]/20 text-[#1E7A56] border border-[#1E7A56]/40"
                                 : "bg-black/[0.05] text-black/40 border border-black/10"
-                            }`}
+                          }`}
                         >
                           {isPassed ? <CheckCircle2 size={14} /> : step.n}
                         </div>
@@ -2355,7 +2526,10 @@ export default function Login() {
         {/* =========================================================================
             CAPABILITIES STRIP
         ========================================================================= */}
-        <section id="capabilities" className="border-t border-black/[0.07] py-20">
+        <section
+          id="capabilities"
+          className="border-t border-black/[0.07] py-20"
+        >
           <div className="max-w-6xl mx-auto px-6">
             <Reveal>
               <p className="font-[IBM_Plex_Mono,monospace] text-xs text-black/45 uppercase tracking-wider mb-8 font-semibold">
@@ -2527,10 +2701,10 @@ export default function Login() {
           </div>
         </div>
       </footer>
+      <BackendWakeOverlay
+        visible={authPhase === "waking"}
+        attempt={wakeAttempt}
+      />
     </div>
   );
 }
-
-
-
-
