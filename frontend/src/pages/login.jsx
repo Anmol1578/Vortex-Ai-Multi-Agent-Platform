@@ -1686,7 +1686,6 @@
 
 
 
-
 import { signInWithPopup } from "firebase/auth";
 import React, {
   useEffect,
@@ -2542,11 +2541,35 @@ export default function Login() {
     setAuthPhase("popup");
     setWakeAttempt(0);
 
-    // Fire-and-forget: wake Auth/Chat/Agent/Billing together as soon as the
-    // button is clicked, instead of only Auth getting woken by the login
-    // request itself. Runs in parallel with the Google popup below, so the
-    // other services get a head start before the dashboard needs them.
-    api.get("/api/warmup").catch(() => {});
+    // Fire-and-forget: ping Gateway, Auth, Chat, Agent, and Billing directly
+    // and independently as soon as the button is clicked, instead of relying
+    // on each service being woken as a side effect of the gateway proxy.
+    // mode: "no-cors" means we can't read the response (these services have
+    // no CORS headers for direct browser calls) but the request still
+    // reaches Render and still wakes the container - we only care that it
+    // was sent, not what it returns.
+    const servicesToWake = [
+      { name: "gateway", url: import.meta.env.VITE_SERVER_URL || "http://localhost:8000" },
+      { name: "auth", url: import.meta.env.VITE_AUTH_SERVICE_URL },
+      { name: "chat", url: import.meta.env.VITE_CHAT_SERVICE_URL },
+      { name: "agent", url: import.meta.env.VITE_AGENT_SERVICE_URL },
+      { name: "billing", url: import.meta.env.VITE_BILLING_SERVICE_URL },
+    ];
+
+    servicesToWake.forEach(({ name, url }) => {
+      if (!url) {
+        console.warn(`[warmup] VITE_${name.toUpperCase()}_SERVICE_URL is not set at build time - skipping direct ${name} wake ping`);
+        return;
+      }
+      console.log(`[warmup] ${name} ping ->`, url);
+      try {
+        fetch(url, { mode: "no-cors" })
+          .then(() => console.log(`[warmup] ${name} ping sent`))
+          .catch((e) => console.warn(`[warmup] ${name} ping failed`, e));
+      } catch (e) {
+        console.warn(`[warmup] ${name} ping threw synchronously`, e);
+      }
+    });
 
     try {
       const result = await signInWithPopup(auth, googleProvider);
