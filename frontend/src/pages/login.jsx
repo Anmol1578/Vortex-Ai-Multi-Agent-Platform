@@ -5967,7 +5967,6 @@ export default function Login() {
     setError("");
     setLoading(true);
     setAuthPhase("popup");
-    setWakeAttempt(0);
 
     // Fire-and-forget: ping Gateway, Auth, Chat, Agent, and Billing directly
     // and independently as soon as the button is clicked, instead of relying
