@@ -59,12 +59,6 @@ export const agent = async (req, res, next) => {
 
     await addMessage(conversationId, "assistant", response);
 
-    /*
-     * Persist to Chat Service — best effort. A failure here must
-     * NOT turn a successful, already-billed agent response into
-     * an error for the user, so it's isolated in its own try/catch
-     * rather than sharing the outer one.
-     */
     try {
       await axios.post(`${process.env.CHAT_SERVICE_URL}/save-message`, {
         conversationId,
@@ -84,7 +78,6 @@ export const agent = async (req, res, next) => {
         conversationId,
         error: chatServiceError.message,
       });
-      // TODO: push to a retry queue instead of silently dropping
     }
 
     return res.status(200).json({
@@ -93,8 +86,6 @@ export const agent = async (req, res, next) => {
       agent: result?.agent,
       images,
       artifacts,
-      // credits: result?.credits,
-      // deductedCredits: result?.deductedCredits,
       credits: result?.creditDeduction?.credits,
       deductedCredits: result?.creditDeduction?.deductedCredits,
     });

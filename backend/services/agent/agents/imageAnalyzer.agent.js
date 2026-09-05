@@ -1,4 +1,3 @@
-
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import fs from "fs/promises";
 import { getModel } from "../config/llmModels.js";
@@ -55,7 +54,10 @@ async function invokeImageModel(llm, messages) {
       throw error;
     }
 
-    console.warn("[imageAnalyzer] transient error, retrying once:", error.message);
+    console.warn(
+      "[imageAnalyzer] transient error, retrying once:",
+      error.message,
+    );
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     return await llm.invoke(messages);
@@ -141,7 +143,9 @@ export const imageAnalyzer = async (state) => {
         console.log(`[imageAnalyzer] temp file deleted: ${state.file.path}`);
       } catch (err) {
         if (err.code !== "ENOENT") {
-          console.warn(`[imageAnalyzer] failed to delete temp file: ${err.message}`);
+          console.warn(
+            `[imageAnalyzer] failed to delete temp file: ${err.message}`,
+          );
         }
       }
     }
